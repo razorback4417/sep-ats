@@ -1,15 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 interface Applicant {
+  _id: string;
   name: string;
   notes: string;
 }
 
 export default function Home() {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchApplicants();
+  }, []);
+
+  const fetchApplicants = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/applicants");
+      if (!response.ok) {
+        throw new Error("Failed to fetch applicants");
+      }
+      const data = await response.json();
+      setApplicants(data);
+    } catch (error) {
+      console.error("Error fetching applicants:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -21,12 +43,18 @@ export default function Home() {
         Add New Applicant
       </Link>
       <div className="mt-4">
-        {applicants.map((applicant, index) => (
-          <div key={index} className="border p-2 mb-2">
-            <h2 className="font-bold">{applicant.name}</h2>
-            <p>{applicant.notes}</p>
-          </div>
-        ))}
+        {isLoading ? (
+          <p>Loading applicants...</p>
+        ) : applicants.length > 0 ? (
+          applicants.map((applicant) => (
+            <div key={applicant._id} className="border p-2 mb-2">
+              <h2 className="font-bold">{applicant.name}</h2>
+              <p>{applicant.notes}</p>
+            </div>
+          ))
+        ) : (
+          <p>No applicants found.</p>
+        )}
       </div>
     </div>
   );

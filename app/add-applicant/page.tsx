@@ -6,18 +6,44 @@ import { useRouter } from "next/navigation";
 export default function AddApplicant() {
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
+  const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically save the applicant data to your backend
-    console.log("Saving applicant:", { name, notes });
-    router.push("/");
+    setError("");
+    try {
+      const response = await fetch("/api/applicants", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, notes }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to add applicant");
+      }
+
+      router.push("/");
+    } catch (error) {
+      console.error("Error adding applicant:", error);
+      setError(error.message);
+    }
   };
 
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Add New Applicant</h1>
+      {error && (
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <label
