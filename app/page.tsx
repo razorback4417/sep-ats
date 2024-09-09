@@ -35,25 +35,32 @@ export default function Home() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Rush Applicant Tracker</h1>
+      <h1 className="text-3xl font-bold mb-6">Rush Applicant Tracker</h1>
       <Link
         href="/add-applicant"
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-6 inline-block"
       >
         Add New Applicant
       </Link>
-      <div className="mt-4">
+      <div className="mt-6">
         {isLoading ? (
-          <p>Loading applicants...</p>
+          <p className="text-gray-600">Loading applicants...</p>
         ) : applicants.length > 0 ? (
-          applicants.map((applicant) => (
-            <div key={applicant._id} className="border p-2 mb-2">
-              <h2 className="font-bold">{applicant.name}</h2>
-              <p>{applicant.notes}</p>
-            </div>
-          ))
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {applicants.map((applicant) => (
+              <div
+                key={applicant._id}
+                className="border rounded-lg p-4 shadow-md"
+              >
+                <h2 className="text-xl font-semibold mb-2">{applicant.name}</h2>
+                <p className="text-gray-600">{applicant.notes}</p>
+              </div>
+            ))}
+          </div>
         ) : (
-          <p>No applicants found.</p>
+          <p className="text-gray-600">
+            No applicants found. Add some to get started!
+          </p>
         )}
       </div>
     </div>
