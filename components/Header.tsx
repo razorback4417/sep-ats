@@ -11,8 +11,9 @@ export default function Header() {
   return (
     <header className="bg-blue-500 text-white p-4">
       <div className="container mx-auto flex justify-between items-center">
-        <Link href="/" className="text-2xl font-bold">
-          SEP ATS
+        <Link href="/" className="flex items-center space-x-2">
+          <img src="/logo.png" alt="SEP Logo" className="h-8 w-auto" />
+          <span className="text-xl font-semibold text-white">SEP ATS</span>
         </Link>
         <nav>
           <Link href="/dashboard" className="mr-4">
