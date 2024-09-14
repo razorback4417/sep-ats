@@ -28,11 +28,14 @@ export default function ApplicantSearch() {
     }
   };
 
-  const filteredApplicants = applicants.filter(
-    (applicant) =>
-      applicant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      applicant.major.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredApplicants = applicants.filter((applicant) => {
+    const nameMatch =
+      applicant.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
+    const majorMatch =
+      applicant.major?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      false;
+    return nameMatch || majorMatch;
+  });
 
   const handleSelectApplicant = (id: string) => {
     setSelectedApplicants((prev) =>
@@ -53,9 +56,10 @@ export default function ApplicantSearch() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredApplicants.map((applicant) => (
           <div key={applicant._id} className="border p-4 rounded">
-            <h2 className="text-xl font-semibold">{applicant.name}</h2>
+            <h2 className="text-xl font-semibold">{applicant.name || "N/A"}</h2>
             <p>
-              {applicant.major} - Year {applicant.year}
+              {applicant.major || "Major not specified"} - Year{" "}
+              {applicant.year || "N/A"}
             </p>
             <input
               type="checkbox"
@@ -70,7 +74,7 @@ export default function ApplicantSearch() {
       {selectedApplicants.length >= 4 && selectedApplicants.length <= 6 && (
         <Link
           href={`/note-taking?ids=${selectedApplicants.join(",")}`}
-          className="mt-4 bg-blue-500 text-white p-2 rounded"
+          className="mt-4 bg-blue-500 text-white p-2 rounded inline-block"
         >
           Start Note-Taking
         </Link>

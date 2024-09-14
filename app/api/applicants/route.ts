@@ -1,20 +1,21 @@
 // app/api/applicants/route.ts
 
-import { NextRequest, NextResponse } from "next/server";
-import { MongoClient, ObjectId } from "mongodb";
-import Applicant from "../../../models/Applicant";
+import { NextResponse } from "next/server";
+import { MongoClient } from "mongodb";
 
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri);
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     await client.connect();
-    const database = client.db("sep_ats");
-    const applicants = database.collection("applicants");
+    console.log("Connected to MongoDB");
 
-    // TODO: Implement pagination and filtering
+    const database = client.db("rush_tracker");
+    const applicants = database.collection("applicants");
     const result = await applicants.find({}).toArray();
+
+    console.log("Fetched applicants:", result);
 
     return NextResponse.json(result);
   } catch (e) {
@@ -28,18 +29,31 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
+  console.log("POST request received");
   try {
-    const body: Applicant = await request.json();
+    const body = await request.json();
+    console.log("Request body:", body);
+
     await client.connect();
-    const database = client.db("sep_ats");
+    console.log("Connected to MongoDB");
+
+    const database = client.db("rush_tracker");
     const applicants = database.collection("applicants");
-    const result = await applicants.insertOne(body);
+    const result = await applicants.insertOne({
+      name: body.name,
+      notes: body.notes,
+      major: body.major,
+      year: body.year,
+      createdAt: new Date(),
+    });
+    console.log("Insert result:", result);
+
     return NextResponse.json(result);
   } catch (e) {
     console.error("POST Error:", e);
     return NextResponse.json(
-      { error: "Failed to add applicant" },
+      { error: "Failed to add applicant", details: e.message },
       { status: 500 }
     );
   } finally {
@@ -47,44 +61,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
-  try {
-    const { id, ...updateData }: Partial<Applicant> & { id: string } =
-      await request.json();
-    await client.connect();
-    const database = client.db("sep_ats");
-    const applicants = database.collection("applicants");
-    const result = await applicants.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: updateData }
-    );
-    return NextResponse.json(result);
-  } catch (e) {
-    console.error("PUT Error:", e);
-    return NextResponse.json(
-      { error: "Failed to update applicant" },
-      { status: 500 }
-    );
-  } finally {
-    await client.close();
-  }
-}
-
-export async function DELETE(request: NextRequest) {
-  try {
-    const { id } = await request.json();
-    await client.connect();
-    const database = client.db("sep_ats");
-    const applicants = database.collection("applicants");
-    const result = await applicants.deleteOne({ _id: new ObjectId(id) });
-    return NextResponse.json(result);
-  } catch (e) {
-    console.error("DELETE Error:", e);
-    return NextResponse.json(
-      { error: "Failed to delete applicant" },
-      { status: 500 }
-    );
-  } finally {
-    await client.close();
-  }
-}
+// ... keep your existing GET method

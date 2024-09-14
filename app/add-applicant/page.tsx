@@ -1,3 +1,5 @@
+// app/add-applicant/page.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -6,6 +8,8 @@ import { useRouter } from "next/navigation";
 export default function AddApplicant() {
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
+  const [major, setMajor] = useState("");
+  const [year, setYear] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
 
@@ -18,7 +22,7 @@ export default function AddApplicant() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, notes }),
+        body: JSON.stringify({ name, notes, major, year }),
       });
 
       if (!response.ok) {
@@ -60,6 +64,43 @@ export default function AddApplicant() {
             onChange={(e) => setName(e.target.value)}
             required
           />
+        </div>
+        <div className="mb-4">
+          <label
+            className="block text-gray-700 text-sm font-bold mb-2"
+            htmlFor="major"
+          >
+            Major
+          </label>
+          <input
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            id="major"
+            type="text"
+            value={major}
+            onChange={(e) => setMajor(e.target.value)}
+            required
+          />
+        </div>
+        <div className="mb-4">
+          <label
+            className="block text-gray-700 text-sm font-bold mb-2"
+            htmlFor="year"
+          >
+            Year
+          </label>
+          <select
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            id="year"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            required
+          >
+            <option value="">Select Year</option>
+            <option value="Freshman">Freshman</option>
+            <option value="Sophomore">Sophomore</option>
+            <option value="Junior">Junior</option>
+            <option value="Senior">Senior</option>
+          </select>
         </div>
         <div className="mb-4">
           <label
