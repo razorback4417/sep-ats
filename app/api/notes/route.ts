@@ -1,41 +1,31 @@
 // app/api/notes/route.ts
 
 import { NextResponse } from "next/server";
-import { MongoClient } from "mongodb";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]/route";
+import Airtable from "airtable";
 
-const uri = process.env.MONGODB_URI as string;
-const client = new MongoClient(uri);
+const base = new Airtable({
+  apiKey: process.env.AIRTABLE_PERSONAL_ACCESS_TOKEN,
+}).base(process.env.AIRTABLE_BASE_ID!);
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
   try {
-    const { applicantIds, content } = await request.json();
-    await client.connect();
-    const database = client.db("sep_ats");
-    const notes = database.collection("notes");
+    const { applicantIds, notes } = await request.json();
 
-    const result = await notes.insertOne({
-      applicantIds,
-      content,
-      userId: session.user.id,
-      createdAt: new Date(),
+    const result = await base("Notes").create({
+      ApplicantIds: applicantIds.join(","),
+      Notes: notes,
+      Timestamp: new Date().toISOString(),
     });
 
-    return NextResponse.json(result);
-  } catch (e) {
-    console.error("POST Error:", e);
+    return NextResponse.json({
+      message: "Notes added successfully",
+      id: result.id,
+    });
+  } catch (error) {
+    console.error("Error saving notes:", error);
     return NextResponse.json(
       { error: "Failed to save notes" },
       { status: 500 }
     );
-  } finally {
-    await client.close();
   }
 }

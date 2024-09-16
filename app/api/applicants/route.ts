@@ -1,64 +1,28 @@
 // app/api/applicants/route.ts
 
 import { NextResponse } from "next/server";
-import { MongoClient } from "mongodb";
+import Airtable from "airtable";
 
-const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri);
+const base = new Airtable({
+  apiKey: process.env.AIRTABLE_PERSONAL_ACCESS_TOKEN,
+}).base(process.env.AIRTABLE_BASE_ID!);
 
 export async function GET() {
   try {
-    await client.connect();
-    console.log("Connected to MongoDB");
-
-    const database = client.db("rush_tracker");
-    const applicants = database.collection("applicants");
-    const result = await applicants.find({}).toArray();
-
-    console.log("Fetched applicants:", result);
-
-    return NextResponse.json(result);
-  } catch (e) {
-    console.error("GET Error:", e);
+    const records = await base(process.env.AIRTABLE_TABLE_NAME!).select().all();
+    const applicants = records.map((record) => ({
+      id: record.id,
+      name: record.get("name"),
+      email: record.get("email"),
+      major: record.get("major"),
+      year: record.get("year"),
+    }));
+    return NextResponse.json(applicants);
+  } catch (error) {
+    console.error("Error fetching applicants:", error);
     return NextResponse.json(
       { error: "Failed to fetch applicants" },
       { status: 500 }
     );
-  } finally {
-    await client.close();
   }
 }
-
-export async function POST(request: Request) {
-  console.log("POST request received");
-  try {
-    const body = await request.json();
-    console.log("Request body:", body);
-
-    await client.connect();
-    console.log("Connected to MongoDB");
-
-    const database = client.db("rush_tracker");
-    const applicants = database.collection("applicants");
-    const result = await applicants.insertOne({
-      name: body.name,
-      notes: body.notes,
-      major: body.major,
-      year: body.year,
-      createdAt: new Date(),
-    });
-    console.log("Insert result:", result);
-
-    return NextResponse.json(result);
-  } catch (e) {
-    console.error("POST Error:", e);
-    return NextResponse.json(
-      { error: "Failed to add applicant", details: e.message },
-      { status: 500 }
-    );
-  } finally {
-    await client.close();
-  }
-}
-
-// ... keep your existing GET method

@@ -3,14 +3,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
-import Applicant from "../../models/Applicant";
+import { useRouter } from "next/navigation";
+
+interface Applicant {
+  id: string;
+  name: string;
+  email: string;
+  major: string;
+  year: string;
+}
 
 export default function NoteTaking() {
-  const searchParams = useSearchParams();
-  const applicantIds = searchParams.get("ids")?.split(",") || [];
   const [applicants, setApplicants] = useState<Applicant[]>([]);
-  const [notes, setNotes] = useState<{ [key: string]: string }>({});
+  const [selectedApplicants, setSelectedApplicants] = useState<string[]>([]);
+  const [notes, setNotes] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     fetchApplicants();
@@ -18,86 +25,89 @@ export default function NoteTaking() {
 
   const fetchApplicants = async () => {
     try {
-      const promises = applicantIds.map((id) =>
-        fetch(`/api/applicants/${id}`).then((res) => res.json())
-      );
-      const fetchedApplicants = await Promise.all(promises);
-      setApplicants(fetchedApplicants);
-      // Initialize notes state
-      const initialNotes = fetchedApplicants.reduce((acc, applicant) => {
-        acc[applicant._id!] = "";
-        return acc;
-      }, {});
-      setNotes(initialNotes);
+      const response = await fetch("/api/applicants");
+      if (!response.ok) {
+        throw new Error("Failed to fetch applicants");
+      }
+      const data = await response.json();
+      setApplicants(data);
     } catch (error) {
       console.error("Error fetching applicants:", error);
     }
   };
 
-  const handleNoteChange = (id: string, value: string) => {
-    setNotes((prev) => ({ ...prev, [id]: value }));
+  const handleApplicantSelect = (id: string) => {
+    setSelectedApplicants((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((appId) => appId !== id);
+      } else if (prev.length < 6) {
+        return [...prev, id];
+      }
+      return prev;
+    });
   };
 
   const handleSubmit = async () => {
+    if (selectedApplicants.length < 4 || selectedApplicants.length > 6) {
+      alert("Please select 4-6 applicants");
+      return;
+    }
     try {
-      const promises = Object.entries(notes).map(([id, content]) =>
-        fetch(`/api/applicants/${id}/notes`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
-        })
-      );
-      await Promise.all(promises);
-      // Redirect to cart or confirmation page
+      const response = await fetch("/api/notes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          applicantIds: selectedApplicants,
+          notes,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to save notes");
+      }
+      router.push("/cart");
     } catch (error) {
-      console.error("Error submitting notes:", error);
+      console.error("Error saving notes:", error);
     }
   };
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Note-Taking Session</h1>
-      {applicants.map((applicant) => (
-        <div key={applicant._id} className="mb-6 p-4 border rounded">
-          <h2 className="text-xl font-semibold">{applicant.name}</h2>
-          <p>
-            {applicant.major} - Year {applicant.year}
-          </p>
-          <img
-            src={applicant.profilePhotoUrl}
-            alt={applicant.name}
-            className="w-32 h-32 object-cover mt-2"
-          />
-          <div className="mt-2">
-            <a
-              href={applicant.resumeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500"
-            >
-              Resume
-            </a>
-            {" | "}
-            <a
-              href={applicant.portfolioUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500"
-            >
-              Portfolio
-            </a>
+      <h1 className="text-2xl font-bold mb-4">
+        Applicant Selection and Note-Taking
+      </h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        {applicants.map((applicant) => (
+          <div
+            key={applicant.id}
+            className={`p-4 border rounded ${
+              selectedApplicants.includes(applicant.id) ? "bg-blue-100" : ""
+            }`}
+            onClick={() => handleApplicantSelect(applicant.id)}
+          >
+            <h2 className="font-bold">{applicant.name}</h2>
+            <p>
+              {applicant.major} - {applicant.year}
+            </p>
+            <p>{applicant.email}</p>
           </div>
-          <textarea
-            value={notes[applicant._id!] || ""}
-            onChange={(e) => handleNoteChange(applicant._id!, e.target.value)}
-            className="w-full h-32 mt-2 p-2 border rounded"
-            placeholder="Enter notes here..."
-          />
-        </div>
-      ))}
+        ))}
+      </div>
+      <p className="mb-2">Selected: {selectedApplicants.length}/6</p>
+      <textarea
+        className="w-full p-2 border rounded mb-4"
+        rows={10}
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Enter your notes here..."
+      />
       <button
+        className="bg-blue-500 text-white px-4 py-2 rounded"
         onClick={handleSubmit}
-        className="mt-4 bg-blue-500 text-white p-2 rounded"
+        disabled={
+          selectedApplicants.length < 4 || selectedApplicants.length > 6
+        }
       >
         Add Notes to Cart
       </button>
