@@ -6,14 +6,15 @@ import Link from "next/link";
 interface Applicant {
   id: string;
   name?: string; // Make name optional
+  email?: string;
   major?: string; // Make major optional
   year?: string;
 }
 
 export default function Home() {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
-  const [selectedApplicants, setSelectedApplicants] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedApplicants, setSelectedApplicants] = useState<string[]>([]);
 
   useEffect(() => {
     fetchApplicants();
@@ -26,13 +27,23 @@ export default function Home() {
         throw new Error("Failed to fetch applicants");
       }
       const data = await response.json();
+      console.log("Fetched applicants:", data); // Log the fetched data
       setApplicants(data);
     } catch (error) {
       console.error("Error fetching applicants:", error);
     }
   };
 
-  const handleApplicantSelect = (id: string) => {
+  const filteredApplicants = applicants.filter((applicant) => {
+    const nameMatch =
+      applicant.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
+    const majorMatch =
+      applicant.major?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+      false;
+    return nameMatch || majorMatch;
+  });
+
+  const toggleApplicantSelection = (id: string) => {
     setSelectedApplicants((prev) => {
       if (prev.includes(id)) {
         return prev.filter((appId) => appId !== id);
@@ -42,14 +53,6 @@ export default function Home() {
       return prev;
     });
   };
-
-  const filteredApplicants = applicants.filter(
-    (applicant) =>
-      (applicant.name?.toLowerCase().includes(searchTerm.toLowerCase()) ??
-        false) ||
-      (applicant.major?.toLowerCase().includes(searchTerm.toLowerCase()) ??
-        false)
-  );
 
   return (
     <div className="container mx-auto p-4">
@@ -68,15 +71,17 @@ export default function Home() {
             className={`p-4 border rounded cursor-pointer ${
               selectedApplicants.includes(applicant.id) ? "bg-blue-100" : ""
             }`}
-            onClick={() => handleApplicantSelect(applicant.id)}
+            onClick={() => toggleApplicantSelection(applicant.id)}
           >
             <h2 className="font-bold">{applicant.name || "No Name"}</h2>
             <p>
               {applicant.major || "No Major"} - {applicant.year || "No Year"}
             </p>
+            <p>{applicant.email || "No Email"}</p>
           </div>
         ))}
       </div>
+      <p className="mt-4">Selected: {selectedApplicants.length}/6</p>
       {selectedApplicants.length >= 4 && selectedApplicants.length <= 6 && (
         <Link
           href={`/note-taking?ids=${selectedApplicants.join(",")}`}
