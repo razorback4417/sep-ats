@@ -5,9 +5,9 @@ import Link from "next/link";
 
 interface Applicant {
   id: string;
-  name?: string; // Make name optional
+  name?: string;
   email?: string;
-  major?: string; // Make major optional
+  major?: string;
   year?: string;
 }
 
@@ -27,7 +27,7 @@ export default function Home() {
         throw new Error("Failed to fetch applicants");
       }
       const data = await response.json();
-      console.log("Fetched applicants:", data); // Log the fetched data
+      console.log("Fetched applicants:", data);
       setApplicants(data);
     } catch (error) {
       console.error("Error fetching applicants:", error);
@@ -43,16 +43,9 @@ export default function Home() {
     return nameMatch || majorMatch;
   });
 
-  const toggleApplicantSelection = (id: string) => {
-    setSelectedApplicants((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((appId) => appId !== id);
-      } else if (prev.length < 6) {
-        return [...prev, id];
-      }
-      return prev;
-    });
-  };
+  console.log("Filtered applicants:", filteredApplicants);
+
+  // ... rest of your component code
 
   return (
     <div className="container mx-auto p-4">
@@ -81,15 +74,7 @@ export default function Home() {
           </div>
         ))}
       </div>
-      <p className="mt-4">Selected: {selectedApplicants.length}/6</p>
-      {selectedApplicants.length >= 4 && selectedApplicants.length <= 6 && (
-        <Link
-          href={`/note-taking?ids=${selectedApplicants.join(",")}`}
-          className="mt-4 bg-blue-500 text-white p-2 rounded inline-block"
-        >
-          Start Note-Taking
-        </Link>
-      )}
+      {/* ... rest of your JSX */}
     </div>
   );
 }

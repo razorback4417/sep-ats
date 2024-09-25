@@ -1,18 +1,29 @@
-// app/applicant-search/page.tsx
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import Applicant from "../../models/Applicant";
+
+interface Applicant {
+  id: string;
+  name: string;
+  email: string;
+  major: string;
+  year: string;
+}
 
 export default function ApplicantSearch() {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedApplicants, setSelectedApplicants] = useState<string[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedApplicants, setSelectedApplicants] = useState<Applicant[]>([]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchApplicants();
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const fetchApplicants = async () => {
@@ -28,53 +39,91 @@ export default function ApplicantSearch() {
     }
   };
 
-  const filteredApplicants = applicants.filter((applicant) => {
-    const nameMatch =
-      applicant.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
-    const majorMatch =
-      applicant.major?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      false;
-    return nameMatch || majorMatch;
-  });
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target as Node)
+    ) {
+      setIsDropdownOpen(false);
+    }
+  };
 
-  const handleSelectApplicant = (id: string) => {
-    setSelectedApplicants((prev) =>
-      prev.includes(id) ? prev.filter((appId) => appId !== id) : [...prev, id]
-    );
+  const filteredApplicants = applicants.filter(
+    (applicant) =>
+      applicant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      applicant.major.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleSelectApplicant = (applicant: Applicant) => {
+    if (!selectedApplicants.some((a) => a.id === applicant.id)) {
+      setSelectedApplicants([...selectedApplicants, applicant]);
+      setSearchTerm("");
+      setIsDropdownOpen(false);
+    }
+  };
+
+  const handleRemoveApplicant = (id: string) => {
+    setSelectedApplicants(selectedApplicants.filter((a) => a.id !== id));
   };
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Applicant Search</h1>
-      <input
-        type="text"
-        placeholder="Search by name or major"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full p-2 mb-4 border rounded"
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredApplicants.map((applicant) => (
-          <div key={applicant._id} className="border p-4 rounded">
-            <h2 className="text-xl font-semibold">{applicant.name || "N/A"}</h2>
-            <p>
-              {applicant.major || "Major not specified"} - Year{" "}
-              {applicant.year || "N/A"}
-            </p>
-            <input
-              type="checkbox"
-              checked={selectedApplicants.includes(applicant._id!)}
-              onChange={() => handleSelectApplicant(applicant._id!)}
-              className="mt-2"
-            />
-            <label className="ml-2">Select for note-taking</label>
+      <h1 className="text-2xl font-bold mb-4 text-white">
+        Rush Applicant Tracker
+      </h1>
+      <div className="relative" ref={dropdownRef}>
+        <input
+          type="text"
+          placeholder="Search applicants..."
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setIsDropdownOpen(true);
+          }}
+          onFocus={() => setIsDropdownOpen(true)}
+          className="w-full p-2 mb-2 border rounded bg-gray-800 text-white"
+        />
+        {isDropdownOpen && (
+          <div className="absolute z-10 w-full bg-gray-800 border border-gray-700 rounded mt-1 max-h-60 overflow-auto">
+            {filteredApplicants.map((applicant) => (
+              <div
+                key={applicant.id}
+                className="p-2 hover:bg-gray-700 cursor-pointer text-white"
+                onClick={() => handleSelectApplicant(applicant)}
+              >
+                {applicant.name} - {applicant.major} ({applicant.year})
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="mt-4">
+        <h2 className="text-xl font-bold mb-2 text-white">
+          Selected Applicants:
+        </h2>
+        {selectedApplicants.map((applicant) => (
+          <div
+            key={applicant.id}
+            className="bg-gray-700 p-2 mb-2 rounded flex justify-between items-center"
+          >
+            <span className="text-white">
+              {applicant.name} - {applicant.major} ({applicant.year})
+            </span>
+            <button
+              onClick={() => handleRemoveApplicant(applicant.id)}
+              className="text-red-500 hover:text-red-700"
+            >
+              Remove
+            </button>
           </div>
         ))}
       </div>
-      {selectedApplicants.length >= 4 && selectedApplicants.length <= 6 && (
+      {selectedApplicants.length > 0 && (
         <Link
-          href={`/note-taking?ids=${selectedApplicants.join(",")}`}
-          className="mt-4 bg-blue-500 text-white p-2 rounded inline-block"
+          href={`/note-taking?ids=${selectedApplicants
+            .map((a) => a.id)
+            .join(",")}`}
+          className="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded inline-block"
         >
           Start Note-Taking
         </Link>

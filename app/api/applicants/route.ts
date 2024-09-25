@@ -1,26 +1,25 @@
 // app/api/applicants/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_PERSONAL_ACCESS_TOKEN;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 const AIRTABLE_TABLE_NAME = process.env.AIRTABLE_TABLE_NAME;
 
-interface AirtableRecord {
-  id: string;
-  fields: {
-    Name: string;
-    Email: string;
-    Major: string;
-    Year: string;
-  };
-}
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}`;
+    const { searchParams } = new URL(request.url);
+    const ids = searchParams.get("ids");
 
-    console.log("Fetching from Airtable URL:", url);
+    let url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}`;
+
+    if (ids) {
+      const filterByFormula = `OR(${ids
+        .split(",")
+        .map((id) => `RECORD_ID()='${id}'`)
+        .join(",")})`;
+      url += `?filterByFormula=${encodeURIComponent(filterByFormula)}`;
+    }
 
     const response = await fetch(url, {
       headers: {
@@ -34,9 +33,8 @@ export async function GET() {
     }
 
     const data = await response.json();
-    console.log("Raw Airtable response:", data);
 
-    const applicants = data.records.map((record: AirtableRecord) => ({
+    const applicants = data.records.map((record: any) => ({
       id: record.id,
       name: record.fields.Name,
       email: record.fields.Email,
@@ -44,11 +42,9 @@ export async function GET() {
       year: record.fields.Year,
     }));
 
-    console.log("Transformed applicants:", applicants);
-
     return NextResponse.json(applicants);
-  } catch (error) {
-    console.error("Error fetching applicants from Airtable:", error);
+  } catch (e) {
+    console.error("GET Error:", e);
     return NextResponse.json(
       { error: "Failed to fetch applicants" },
       { status: 500 }
