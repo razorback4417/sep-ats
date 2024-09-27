@@ -4,12 +4,16 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 interface Note {
   id: string;
-  applicantId: string;
-  notes: string;
-  timestamp: string;
+  fields: {
+    ApplicantId: string;
+    Notes: string;
+    Timestamp: string;
+  };
 }
 
 interface Applicant {
@@ -19,15 +23,29 @@ interface Applicant {
   year: string;
 }
 
+type Rating = "thumbsUp" | "neutral" | "thumbsDown";
+
+interface GroupedNotes {
+  [applicantId: string]: {
+    applicant: Applicant;
+    notes: Note[];
+  };
+}
+
 export default function Cart() {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [applicants, setApplicants] = useState<{ [key: string]: Applicant }>(
-    {}
-  );
+  const [groupedNotes, setGroupedNotes] = useState<GroupedNotes>({});
+  const [ratings, setRatings] = useState<{ [key: string]: Rating }>({});
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const { data: session } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
-    fetchNotes();
-  }, []);
+    if (!session) {
+      router.push("/signin");
+    } else {
+      fetchNotes();
+    }
+  }, [session, router]);
 
   const fetchNotes = async () => {
     try {
@@ -35,47 +53,161 @@ export default function Cart() {
       if (!response.ok) {
         throw new Error("Failed to fetch notes");
       }
-      const data = await response.json();
-      setNotes(data);
+      const data: Note[] = await response.json();
 
-      // Fetch applicant details for each unique applicantId
-      const uniqueApplicantIds = [
-        ...new Set(data.map((note) => note.applicantId)),
+      const applicantIds = [
+        ...new Set(data.map((note) => note.fields.ApplicantId)),
       ];
       const applicantsResponse = await fetch(
-        `/api/applicants?ids=${uniqueApplicantIds.join(",")}`
+        `/api/applicants?ids=${applicantIds.join(",")}`
       );
       if (!applicantsResponse.ok) {
         throw new Error("Failed to fetch applicants");
       }
-      const applicantsData = await applicantsResponse.json();
-      const applicantsMap = applicantsData.reduce((acc, applicant) => {
-        acc[applicant.id] = applicant;
-        return acc;
-      }, {});
-      setApplicants(applicantsMap);
+      const applicantsData: Applicant[] = await applicantsResponse.json();
+
+      const grouped: GroupedNotes = {};
+      data.forEach((note) => {
+        if (!grouped[note.fields.ApplicantId]) {
+          const applicant = applicantsData.find(
+            (a) => a.id === note.fields.ApplicantId
+          );
+          if (applicant) {
+            grouped[note.fields.ApplicantId] = { applicant, notes: [] };
+          }
+        }
+        if (grouped[note.fields.ApplicantId]) {
+          grouped[note.fields.ApplicantId].notes.push(note);
+        }
+      });
+
+      setGroupedNotes(grouped);
     } catch (error) {
-      console.error("Error fetching notes:", error);
+      console.error("Error fetching data:", error);
+    }
+  };
+
+  const handleRating = (applicantId: string, rating: Rating) => {
+    setRatings((prev) => ({ ...prev, [applicantId]: rating }));
+  };
+
+  const handleCheckout = async () => {
+    setCheckoutError(null);
+    try {
+      console.log("Ratings before conversion:", ratings);
+
+      // Convert ratings object to array format expected by the API
+      const ratingsArray = Object.entries(ratings).map(
+        ([applicantId, rating]) => ({
+          fields: {
+            ApplicantId: applicantId,
+            Rating: rating,
+          },
+        })
+      );
+
+      console.log("Ratings array being sent:", ratingsArray);
+
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ratings: ratingsArray }),
+      });
+
+      const responseData = await response.json();
+      console.log("Checkout API response:", responseData);
+
+      if (!response.ok) {
+        throw new Error(responseData.error || "Failed to checkout");
+      }
+
+      console.log(responseData.message);
+      router.push("/dashboard");
+    } catch (error) {
+      console.error("Error during checkout:", error);
+      setCheckoutError(
+        error.message || "An unexpected error occurred during checkout"
+      );
     }
   };
 
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4 text-white">Notes Cart</h1>
-      {notes.map((note) => (
-        <div key={note.id} className="mb-4 p-4 bg-gray-800 rounded">
-          <h2 className="text-xl font-bold text-white">
-            {applicants[note.applicantId]?.name || "Unknown Applicant"}
-          </h2>
-          <p className="text-gray-300">{note.notes}</p>
-          <p className="text-sm text-gray-400 mt-2">
-            Noted on: {new Date(note.timestamp).toLocaleString()}
-          </p>
+      {Object.entries(groupedNotes).map(
+        ([applicantId, { applicant, notes }]) => (
+          <div key={applicantId} className="mb-4 p-4 bg-gray-800 rounded">
+            <h2 className="text-xl font-bold text-white">{applicant.name}</h2>
+            <p className="text-gray-300">
+              {applicant.major} - {applicant.year}
+            </p>
+            {notes.map((note, index) => (
+              <div key={note.id} className="mt-2">
+                <p className="text-gray-300">{note.fields.Notes}</p>
+                <p className="text-sm text-gray-400">
+                  Noted on: {new Date(note.fields.Timestamp).toLocaleString()}
+                </p>
+                {index < notes.length - 1 && (
+                  <hr className="my-2 border-gray-600" />
+                )}
+              </div>
+            ))}
+            <div className="mt-2">
+              <button
+                onClick={() => handleRating(applicantId, "thumbsUp")}
+                className={`mr-2 p-2 rounded ${
+                  ratings[applicantId] === "thumbsUp"
+                    ? "bg-green-500"
+                    : "bg-gray-500"
+                }`}
+              >
+                👍
+              </button>
+              <button
+                onClick={() => handleRating(applicantId, "neutral")}
+                className={`mr-2 p-2 rounded ${
+                  ratings[applicantId] === "neutral"
+                    ? "bg-yellow-500"
+                    : "bg-gray-500"
+                }`}
+              >
+                😐
+              </button>
+              <button
+                onClick={() => handleRating(applicantId, "thumbsDown")}
+                className={`p-2 rounded ${
+                  ratings[applicantId] === "thumbsDown"
+                    ? "bg-red-500"
+                    : "bg-gray-500"
+                }`}
+              >
+                👎
+              </button>
+            </div>
+          </div>
+        )
+      )}
+
+      {checkoutError && (
+        <div className="mt-4 p-4 bg-red-500 text-white rounded">
+          Error: {checkoutError}
         </div>
-      ))}
+      )}
+
+      <button
+        onClick={handleCheckout}
+        className="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+        disabled={
+          Object.keys(ratings).length !== Object.keys(groupedNotes).length
+        }
+      >
+        Checkout
+      </button>
       <Link
         href="/applicant-search"
-        className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded inline-block"
+        className="mt-4 ml-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded inline-block"
       >
         Back to Applicant Search
       </Link>

@@ -1,7 +1,10 @@
+// app/note-taking/page.tsx
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 interface Applicant {
   id: string;
@@ -17,10 +20,15 @@ export default function NoteTaking() {
   const applicantIds = searchParams.get("ids")?.split(",") || [];
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
+  const { data: session } = useSession();
 
   useEffect(() => {
-    fetchApplicants();
-  }, []);
+    if (!session) {
+      router.push("/signin");
+    } else {
+      fetchApplicants();
+    }
+  }, [session, router]);
 
   const fetchApplicants = async () => {
     try {
@@ -53,6 +61,11 @@ export default function NoteTaking() {
   };
 
   const handleAddToCart = async () => {
+    if (!session?.user) {
+      console.error("User not authenticated");
+      return;
+    }
+
     const applicantNotes = {};
     applicants.forEach((applicant) => {
       const regex = new RegExp(`@${applicant.name}([^@]*)`, "g");
@@ -60,11 +73,12 @@ export default function NoteTaking() {
       if (matches) {
         applicantNotes[applicant.id] = matches
           .map((match) => match.replace(`@${applicant.name}`, "").trim())
-          .join(" ");
+          .join("\n\n");
       }
     });
 
     try {
+      console.log("Sending notes to server:", applicantNotes);
       const response = await fetch("/api/notes", {
         method: "POST",
         headers: {
@@ -74,13 +88,20 @@ export default function NoteTaking() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save notes");
+        const errorData = await response.json();
+        console.error("Server response:", errorData);
+        throw new Error(
+          `Failed to save notes: ${errorData.error || response.statusText}`
+        );
       }
 
-      router.push("/cart"); // Redirect to cart page after saving
+      const result = await response.json();
+      console.log("Notes saved successfully:", result);
+
+      router.push("/cart");
     } catch (error) {
       console.error("Error saving notes:", error);
-      // Here you might want to show an error message to the user
+      // You might want to show an error message to the user here
     }
   };
 
@@ -89,12 +110,12 @@ export default function NoteTaking() {
       <h1 className="text-2xl font-bold mb-4 text-white">
         Group Discussion Notes
       </h1>
-      <div className="flex mb-4">
+      <div className="flex flex-wrap mb-4">
         {applicants.map((applicant) => (
           <button
             key={applicant.id}
             onClick={() => insertApplicantMention(applicant)}
-            className="mr-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="mr-2 mb-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             @{applicant.name}
           </button>
