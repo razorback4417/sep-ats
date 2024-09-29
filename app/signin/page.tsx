@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 
 export default function SignIn() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") || "/applicant-search";
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-950 text-gray-100">

@@ -24,7 +24,7 @@ export default function Header() {
               Dashboard
             </Link>
             <Link href="/applicant-search" className="text-sm font-medium text-gray-300 hover:text-white">
-              Search Applicants
+              Applicant Notes
             </Link>
             {session ? (
               <button
@@ -59,7 +59,7 @@ export default function Header() {
               Dashboard
             </Link>
             <Link href="/applicant-search" className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700">
-              Search Applicants
+              Applicant Notes
             </Link>
             {session ? (
               <button
