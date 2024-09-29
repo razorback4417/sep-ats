@@ -34,6 +34,7 @@ interface GroupedNotes {
 
 export default function Cart() {
   const [groupedNotes, setGroupedNotes] = useState<GroupedNotes>({});
+  // New state for ratings
   const [ratings, setRatings] = useState<{ [key: string]: Rating }>({});
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const { data: session } = useSession();
@@ -43,11 +44,12 @@ export default function Cart() {
     if (!session) {
       router.push("/signin");
     } else {
-      fetchNotes();
+      fetchNotesAndRatings();
     }
   }, [session, router]);
 
-  const fetchNotes = async () => {
+  // New function to fetch notes and ratings
+  const fetchNotesAndRatings = async () => {
     try {
       const response = await fetch("/api/notes");
       if (!response.ok) {
@@ -87,8 +89,40 @@ export default function Cart() {
     }
   };
 
-  const handleRating = (applicantId: string, rating: Rating) => {
-    setRatings((prev) => ({ ...prev, [applicantId]: rating }));
+  // Updated handleRating function
+  const handleRating = async (applicantId: string, rating: Rating) => {
+    if (!session?.user) {
+      console.error("User not authenticated");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/ratings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ [applicantId]: rating }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error("API error response:", errorData);
+        throw new Error(`Failed to save rating: ${errorData}`);
+      }
+
+      const data = await response.json();
+      console.log("Rating saved successfully:", data);
+
+      // Update the local state to reflect the new rating
+      setRatings((prevRatings) => ({
+        ...prevRatings,
+        [applicantId]: rating,
+      }));
+    } catch (error) {
+      console.error("Error saving rating:", error);
+      // Handle error (e.g., show error message to user)
+    }
   };
 
   const handleCheckout = async () => {

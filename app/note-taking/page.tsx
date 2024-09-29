@@ -77,8 +77,12 @@ export default function NoteTaking() {
       }
     });
 
+    console.log(
+      "Applicant notes to be sent:",
+      JSON.stringify(applicantNotes, null, 2)
+    );
+
     try {
-      console.log("Sending notes to server:", applicantNotes);
       const response = await fetch("/api/notes", {
         method: "POST",
         headers: {
@@ -88,15 +92,13 @@ export default function NoteTaking() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Server response:", errorData);
-        throw new Error(
-          `Failed to save notes: ${errorData.error || response.statusText}`
-        );
+        const errorData = await response.text();
+        console.error("API error response:", errorData);
+        throw new Error(`Failed to save notes: ${errorData}`);
       }
 
-      const result = await response.json();
-      console.log("Notes saved successfully:", result);
+      const data = await response.json();
+      console.log("Notes saved successfully:", data);
 
       router.push("/cart");
     } catch (error) {
