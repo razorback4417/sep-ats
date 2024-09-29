@@ -14,8 +14,7 @@ export default async function Dashboard() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Welcome to your Dashboard</h1>
-      <p>You are logged in as {session.user?.name || session.user?.email}</p>
-      {/* Add more dashboard content here */}
+      {/* Add dashboard content here */}
     </div>
   );
 }
