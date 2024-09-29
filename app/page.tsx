@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { Search } from "lucide-react";
 
 interface Applicant {
   id: string;
@@ -45,36 +46,52 @@ export default function Home() {
 
   console.log("Filtered applicants:", filteredApplicants);
 
-  // ... rest of your component code
+  const toggleApplicantSelection = (id: string) => {
+    setSelectedApplicants((prev) =>
+      prev.includes(id) ? prev.filter((appId) => appId !== id) : [...prev, id]
+    );
+  };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Rush Applicant Tracker</h1>
-      <input
-        type="text"
-        placeholder="Search applicants..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full p-2 mb-4 border rounded"
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="container mx-auto p-6 bg-gray-950 text-gray-100">
+      <h1 className="text-3xl font-bold tracking-tight mb-6">Rush Applicant Tracker</h1>
+      <div className="relative mb-6">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search applicants..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full py-2 pl-9 pr-4 rounded-md border border-gray-700 bg-gray-800 text-gray-100 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-transparent"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredApplicants.map((applicant) => (
           <div
             key={applicant.id}
-            className={`p-4 border rounded cursor-pointer ${
-              selectedApplicants.includes(applicant.id) ? "bg-blue-100" : ""
-            }`}
+            className={`rounded-lg border bg-gray-900 text-gray-100 shadow-sm transition-all duration-200 ${
+              selectedApplicants.includes(applicant.id)
+                ? "border-gray-700 bg-gray-800"
+                : "border-gray-800"
+            } hover:border-gray-700`}
             onClick={() => toggleApplicantSelection(applicant.id)}
           >
-            <h2 className="font-bold">{applicant.name || "No Name"}</h2>
-            <p>
-              {applicant.major || "No Major"} - {applicant.year || "No Year"}
-            </p>
-            <p>{applicant.email || "No Email"}</p>
+            <div className="p-6 flex flex-col space-y-1.5">
+              <h3 className="text-2xl font-semibold leading-none tracking-tight">
+                {applicant.name || "No Name"}
+              </h3>
+              <p className="text-sm text-gray-400">
+                {applicant.major || "No Major"} - {applicant.year || "No Year"}
+              </p>
+            </div>
+            <div className="p-6 pt-0">
+              <p className="text-sm text-gray-300">{applicant.email || "No Email"}</p>
+            </div>
           </div>
         ))}
       </div>
-      {/* ... rest of your JSX */}
     </div>
   );
 }
